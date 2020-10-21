@@ -1,0 +1,50 @@
+import pymysql
+import requests
+from bs4 import BeautifulSoup
+
+#连接数据库
+connect = pymysql.Connect(
+    host = 'localhost',
+    port = 3306,
+    user = 'root',
+    password = '140918',   #数据库的密码
+    db = 'INTERNSHIP_INFORMATION',    #建立的数据库名称
+    charset = 'utf8'    #采用的字符编码方式
+)
+
+#获取游标
+cursor = connect.cursor()
+
+#将信息插入数据库
+def put_in(company_name,job_info,address,pay):
+    sql = "INSERT INTO internship_information (company_name,job_info,address,pay) VALUES ('{company_name}','{job_info}','{address}','{pay}')".format(company_name=company_name,job_info=job_info,address=address,pay=pay)    #SQL语句
+    cursor.execute(sql)    #执行SQL语句
+    connect.commit()    #把事务所做的修改保存到数据库
+
+url =  'https://www.nowcoder.com/intern/center?recruitType=1&page={}'    #要爬取的链接主体
+headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}    #更改头域
+
+#爬取实习岗位信息
+def get_information(url,n):
+    url = 'https://www.nowcoder.com/intern/center?recruitType=1&page={}'.format(n)    #爬取链接
+    html = requests.get(url, headers=headers)    #获取html文件
+    
+    soup = BeautifulSoup(html.content,'lxml')    #转化成对象类型
+    Info = soup.find_all('li',class_="clearfix")    #寻找有关实习信息的语句
+   
+    for li in Info:
+        job_name = str(li.select('a')[1].string)    #获取岗位信息
+        company_name = str(li.select('a')[2].string)    #获取公司信息
+        #company_name = str(li.select('div')[3].string)
+        address = str(li.select('span')[0].text)    #获取工作地址
+        pay = str(li.select('span')[1].text)    #获取薪资信息
+        
+        print(company_name,job_name,address,pay)
+    
+        put_in(company_name,job_name,address,pay)    #将获取的信息插入数据库
+
+if __name__ == "__main__":
+    for n in range(1,11):    #循环操作，爬取1-10页内容
+        get_information(url,n)
+
+
