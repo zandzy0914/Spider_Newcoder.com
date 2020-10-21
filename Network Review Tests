@@ -1,0 +1,55 @@
+import pymysql
+import requests
+import re
+
+#连接数据库
+connect = pymysql.Connect(
+    host = 'localhost',
+    port = 3306,
+    user = 'root',
+    password = '140918',   #数据库的密码
+    db = 'NETWORK-REVIEW',    #建立的数据库名称
+    charset = 'utf8'    #采用的字符编码方式
+)
+
+#获取游标
+cursor = connect.cursor()
+
+#将信息插入数据库
+def put_in(question,answer,url):
+    sql = "INSERT INTO network_review (question,answer,url) VALUES ('{question}','{answer}','{url}')".format(question = question,answer = answer,url = url)    #SQL语句
+    cursor.execute(sql)    #执行SQL语句
+    connect.commit()    #把事务所做的修改保存到数据库
+    
+url =  'https://www.nowcoder.com/ta/review-network/review?page={}'    #要爬取的链接主体
+headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}    #更改头域
+
+#爬取内容
+def get_question(url,n):
+    url = 'https://www.nowcoder.com/ta/review-network/review?page={}'.format(n)    #链接的变化
+    
+    response = requests.get(url,headers=headers)   #采用get的请求方式
+    response.encoding = 'utf-8'   #解码
+    response_text = response.text    #获取文本数据
+
+    #获取题目内容
+    print('question{0}:'.format(n))
+    question_html = re.findall('<div class="final-question">(.*?)</div>',response_text,re.S)    #寻找题目所在位置
+    question_html = question_html[0]    #存储
+    question = re.sub('(<p>)||(</p>)||<div>', '',question_html)    #删去无关字符
+    question = question.strip().replace("'","\'")    #删去无关字符
+    print(question)
+
+    #获取答案
+    answer_html = re.findall('<div class="design-answer-box">(.*?)<div class="final-action clearfix">',response_text,re.S)    #寻找答案所在位置
+    answer_html = answer_html[0]    #存储
+    answer = re.sub('(<div>)||(</div>)||(<br>)||(<p>)||(<br/>)||(</p>)||(<span>)||(</span>)', '', answer_html)    #删去无关字符
+    answer = answer.strip().replace("\'",'')   #删去无关字符
+    print(answer)
+
+    #传入数据库
+    put_in(question,answer,url)
+
+if __name__ == "__main__":
+    for n in range(1,12):    #循环操作，爬取1-10题
+        get_question(url,n)
