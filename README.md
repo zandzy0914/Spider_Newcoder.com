@@ -1,5 +1,3 @@
-# Spider_Newcoder.com
-python爬虫爬取牛客网
 # #8 提前(了解)996社畜(相关信息)
 
 ## 一、背景
